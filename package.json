@@ -6,7 +6,7 @@
   "scripts": {
     "wipe": "mocha ./tests/database.refresh.js --reporter spec --log-level=warn --timeout 10000",
     "test": "mocha ./tests/test.*.js --reporter spec --log-level=warn --timeout 10000",
-    "dev": "nodemon server.js"
+    "dev": "node database.js && nodemon server.js"
   },
   "repository": {
     "type": "git",
