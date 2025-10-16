@@ -81,12 +81,12 @@ app.get("/cart",(req, res)=>{
 
 app.post("/cart", (req,res)=>{
     const schema = Joi.object({
-        item_name: req.body.item_name,
+        item_name: Joi.string(),
         item_price: Joi.number().min(0),
         quantity: Joi.number().integer().min(0)
     });
-
-    const { error } =schema.valid(req.body);
+    console.log(req.body)
+    const { error } = schema.validate(req.body);
     if(error) return res.status(400).send(error.details[0].message);
 
     const sql = 'INSERT INTO cart (item_id, item_name, item_price, quantity) VALUES (?,?,?)'
@@ -95,7 +95,7 @@ app.post("/cart", (req,res)=>{
     ];
 
     db.run(sql,item, function (err){
-        if(err) return done(err);
+        if(err) return err;
 
         return res.status(201).send({
             item_id: this.lastID,
@@ -104,11 +104,6 @@ app.post("/cart", (req,res)=>{
             quantity: req.body.quantity
         });
     });
-
-
-    next_id = next_id + 1;
-
-    return res.status(201).send(item);
 });
 
 app.delete("/items/:id",(req,res) =>{
@@ -134,7 +129,7 @@ app.patch("/users/:id",(req, res) =>{
 
     const index = users.indexOf(user);
 
-    const { error } = schema.valid(req.body);
+    const { error } = schema.validate(req.body);
     if (!error) return res.status(400).send(error.details[0].message);
 
     items.index.name = req.body.quantity;
