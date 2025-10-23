@@ -1,7 +1,7 @@
 const express = require("express");
 const Joi = require("joi")
 const app = express();
-const sqlite3 = require("sqlite3")
+const sqlite3 = require("sqlite3").verbose()
 
 
 const DBSOURCE = "db.sqlite"
@@ -13,34 +13,56 @@ let db = new sqlite3.Database(DBSOURCE,(err) =>{
    }else{
        console.log("Connected to the SQlite DB")
 
-       db.run(`CREATE TABLE cart(
+       db.run(`CREATE TABLE IF NOT EXISTS items(
         item_id INTEGER PRIMARY KEY AUTOINCREMENT,
         item_name TEXT NOT NULL,
         item_price INTEGER NOT NULL,
-        quantity INTEGER NOT NULL,
-       )
-       `, (err) =>{
+        quantity INTEGER NOT NULL
+       )`
+       , (err) =>{
           if(err){
-              console.log("Cart Table Exists")
+              console.log(err)
+              console.log("items Table Exists")
           } else{
-              console.log("Cart table Create")
+              console.log("items table Create")
           }
+       });
+       db.run(`CREATE TABLE IF NOT EXISTS user_items(
+        item_id INTEGER,
+        user_id INTEGER,
+        quantity INTEGER,
+        PRIMARY KEY (item_id, user_id),
+        FOREIGN KEY (item_id)
+            REFERENCES items (item_id)
+                ON DELETE CASCADE
+                ON UPDATE NO ACTION,
+        FOREIGN KEY (user_id)
+            REFERENCES user (user_id)
+                ON DELETE CASCADE
+                ON UPDATE NO ACTION
+       )`
+       , (err) =>{
+           if(err){
+               console.log(err)
+               console.log("user_items Table Exists")
+           } else{
+               console.log("user_items table Create")
+           }
+       });
+       db.run(`CREATE TABLE IF NOT EXISTS users(
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_name TEXT NOT NULL
+       )`
+       , (err) =>{
+           if(err){
+               console.log(err)
+               console.log("users Table Exists")
+           } else{
+               console.log("users table Create")
+           }
        });
    }
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -57,7 +79,7 @@ app.get("/",(req,res)=>{
     res.send("I am Alive")
 });
 
-app.get("/cart",(req, res)=>{
+app.get("/item",(req, res)=>{
    db.each(
        "SELECT * FROM cart",
        [],
@@ -118,7 +140,7 @@ app.delete("/items/:id",(req,res) =>{
     return res.status(200).send("User Deleted")
 });
 
-app.patch("/users/:id",(req, res) =>{
+app.patch("/items/:id",(req, res) =>{
     const schema = Joi.object({
         quantity: Joi.number().integer().min()
     });
@@ -137,7 +159,7 @@ app.patch("/users/:id",(req, res) =>{
     return res.status(200).send("Item quantity of "+index+" to " +req.body.quantity)
 });
 
-app.get("/users/:id",(req, res) =>{
+app.get("/items/:id",(req, res) =>{
     const item = items.find(temp => temp.items_id === id);
     if (!item) return res.status(404).send("No User Found")
 
