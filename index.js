@@ -72,16 +72,69 @@ app.use(express.json())
 
 const port = 8080;
 
-let items = [];
 let next_id = 1;
 
 app.get("/",(req,res)=>{
     res.send("I am Alive")
 });
 
-app.get("/item",(req, res)=>{
-   db.each(
-       "SELECT * FROM cart",
+app.get("/users",(req,res)=>{
+    let users = []
+    db.each(
+        "SELECT * FROM users",
+        [],
+        (err, row) =>{
+            if(err) return res.status(400).send("Couldn't get users");
+
+            users.push({
+                user_id: row.user_id,
+                user_name: row.user_name
+            })
+        },
+        (err, num_rows)=>{
+            if(err) return res.status(400).send("Couldn't get users")
+
+            return res.status(200).send(users);
+        }
+    )
+});
+
+app.post("/users",(req,res)=>{
+    const schema = Joi.object({
+        user_id: Joi.number().min(1),
+        user_name: Joi.string()
+    });
+    console.log(req.body)
+    const { error } = schema.validate(req.body);
+    if(error) return res.status(400).send(error.details[0].message);
+
+    const sql = 'INSERT INTO users (user_name) VALUES (?)'
+    let user = [
+        req.body.user_name
+    ];
+
+    db.run(sql,user, function (err){
+        if(err) {
+            return res.status(500).send(err.details[0].message);
+        }
+
+        return res.status(201).send({
+            item_id: this.lastID,
+            user_name: req.body.user_name
+        });
+    });
+});
+
+
+app.get("cart/:id",(req, res)=> {
+
+});
+
+
+app.get("/items",(req, res)=>{
+   let items = []
+    db.each(
+       "SELECT * FROM items",
        [],
        (err, row) =>{
            if(err) return res.status(400).send("Couldn't get items");
@@ -94,31 +147,31 @@ app.get("/item",(req, res)=>{
            })
        },
        (err, num_rows)=>{
-           if(err) return res.status(400).send("Couldn't get cart")
+           if(err) return res.status(400).send("Couldn't get items")
 
            return res.status(200).send(items);
        }
    )
 });
 
-app.post("/cart", (req,res)=>{
+app.post("/items", (req,res)=>{
     const schema = Joi.object({
         item_name: Joi.string(),
         item_price: Joi.number().min(0),
         quantity: Joi.number().integer().min(0)
     });
-    console.log(req.body)
+    console.log(req.body);
     const { error } = schema.validate(req.body);
     if(error) return res.status(400).send(error.details[0].message);
 
-    const sql = 'INSERT INTO cart (item_id, item_name, item_price, quantity) VALUES (?,?,?)'
+    const sql = 'INSERT INTO items (item_name, item_price, quantity) VALUES (?,?,?)'
     let item = [
-        next_id, req.body.item_name, req.body.item_price, req.body.quantity
+        req.body.item_name, req.body.item_price, req.body.quantity
     ];
-
     db.run(sql,item, function (err){
-        if(err) return err;
-
+        if(err) {
+            return res.status(500).send(err.details[0].message);
+        }
         return res.status(201).send({
             item_id: this.lastID,
             item_name: req.body.item_name,
@@ -145,25 +198,47 @@ app.patch("/items/:id",(req, res) =>{
         quantity: Joi.number().integer().min()
     });
 
+    const { error } = schema.validate(req.body);
+    if (!error) return res.status(400).send(error.details[0].message);
+
+    let id = parseInt(req.params.id);
+    const sql = 'select * From items WHERE items.item_id = ?'
+
 
     const item = items.find(temp => temp.user_id === id);
     if (!item) return res.status(404).send("No Items Found")
 
     const index = users.indexOf(user);
 
-    const { error } = schema.validate(req.body);
-    if (!error) return res.status(400).send(error.details[0].message);
+
 
     items.index.name = req.body.quantity;
 
-    return res.status(200).send("Item quantity of "+index+" to " +req.body.quantity)
+    return res.status(201).send("Item quantity of "+index+" to " +req.body.quantity)
 });
 
 app.get("/items/:id",(req, res) =>{
-    const item = items.find(temp => temp.items_id === id);
-    if (!item) return res.status(404).send("No User Found")
+    let id = parseInt(req.params.id);
+    const schema = Joi.object({
+        quantity: Joi.number().integer().min()
+    });
 
-    return res.status(200).send(item);
+    const { error } = schema.validate(id);
+    if (!error) return res.status(400).send(error.details[0].message);
+
+    const sql = 'select * From items WHERE items.item_id = ?'
+
+    db.run(sql,id, function (err){
+        if(err) {
+            return res.status(500).send(err.details[0].message);
+        }
+        return res.status(200).send({
+            item_id: this.lastID,
+            item_name: req.body.item_name,
+            item_price: req.body.item_price,
+            quantity: req.body.quantity
+        });
+    });
 });
 
 app.listen(port,()=>{
