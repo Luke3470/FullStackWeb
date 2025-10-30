@@ -183,19 +183,27 @@ app.post("/items", (req,res)=>{
 
 app.delete("/items/:id",(req,res) =>{
     let id = parseInt(req.params.id);
+    const schema = Joi.object({
+        quantity: Joi.number().integer().min(0)
+    });
 
-    const user = users.find(temp=> temp.user_id === id);
-    if (!user) return res.status(404).send("No User Found")
+    const { error } = schema.validate(id);
+    if (!error) return res.status(400).send(error.details[0].message);
 
-    const index = users.indexOf(user);
-    users.splice(index,1);
+    const sql = 'DELETE FROM items WHERE items.item_id = ?'
 
-    return res.status(200).send("User Deleted")
+    db.get(sql,id, function (err,row){
+        if(err) {
+            return res.status(500).send(err.details[0].message);
+        }
+        if(!row) res.status(404).send("Not Found");
+        return res.status(200).send("Deleted")
+    });
 });
 
 app.patch("/items/:id",(req, res) =>{
     const schema = Joi.object({
-        quantity: Joi.number().integer().min()
+        quantity: Joi.number().integer().min(0)
     });
 
     const { error } = schema.validate(req.body);
@@ -218,9 +226,10 @@ app.patch("/items/:id",(req, res) =>{
 });
 
 app.get("/items/:id",(req, res) =>{
+
     let id = parseInt(req.params.id);
     const schema = Joi.object({
-        quantity: Joi.number().integer().min()
+        quantity: Joi.number().integer().min(0)
     });
 
     const { error } = schema.validate(id);
@@ -228,15 +237,16 @@ app.get("/items/:id",(req, res) =>{
 
     const sql = 'select * From items WHERE items.item_id = ?'
 
-    db.run(sql,id, function (err){
+    db.get(sql,id, function (err,row){
         if(err) {
             return res.status(500).send(err.details[0].message);
         }
+        if(!row) res.status(404).send("Not Found");
         return res.status(200).send({
-            item_id: this.lastID,
-            item_name: req.body.item_name,
-            item_price: req.body.item_price,
-            quantity: req.body.quantity
+            item_id: row.item_id,
+            item_name: row.item_name,
+            item_price: row.item_price,
+            quantity: row.quantity
         });
     });
 });
