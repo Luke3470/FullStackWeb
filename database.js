@@ -80,6 +80,35 @@ let db = new sqlite3.Database(DBSOURCE, (err) => {
                 }
             }
         );
+
+        db.run(`CREATE TABLE IF NOT EXISTS categories (
+                category_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT,
+                description,
+                CONSTRAINT name_unique UNIQUE (name)
+                )`, (err) =>{
+                if(err){
+                    console.log('Categories Table Created already');
+                }else{
+                    console.log("Categories Table Created");
+                }
+            }
+        );
+
+        db.run(`CREATE TABLE IF NOT EXISTS item_category(
+                category_id INTEGER,
+                item_id INTEGER,
+                FOREIGN KEY (category_id) REFERENCES categories(category_id),
+                FOREIGN KEY (item_id) REFERENCES items(item_id)
+                )`,(err) => {
+                if(err){
+                    console.log(err)
+                    console.log('Item_Category Created already');
+                }else{
+                    console.log("Item_Category Table Created");
+                }
+            }
+        );
     }
 });
 
