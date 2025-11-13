@@ -8,7 +8,7 @@ const app = express();
 app.use(cors());
 
 // Server port
-const HTTP_PORT = 3333;
+const HTTP_PORT = 8080;
 
 // Start server
 app.listen(HTTP_PORT, () => {
@@ -29,9 +29,9 @@ app.get('/', (req, res, next) => {
 
 // Other API endpoints: Links go here...
 // You can uncomment the below three lines as you implement the functionality - we'll discuss this structure in week three.
-// require('./app/routes/user.server.routes')(app);
-// require('./app/routes/core.server.routes')(app);
-// require('./app/routes/question.server.routes')(app);
+require('./app/routes/user.server.routes')(app);
+require('./app/routes/core.server.routes')(app);
+require('./app/routes/question.server.routes')(app);
 
 
 // Default response for any other request

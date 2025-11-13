@@ -1,0 +1,1 @@
+const core = require("app/controllers/core.server.controller.js")
