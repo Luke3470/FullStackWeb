@@ -1,1 +1,1 @@
-const core = require("app/controllers/core.server.controller.js")
+const core = require("../controllers/core.server.controller.js")
