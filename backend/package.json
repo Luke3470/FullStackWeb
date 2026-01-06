@@ -4,8 +4,8 @@
   "description": "The Auctionary API for the 25/25 Full Stack Web Development assignment",
   "main": "server.js",
   "scripts": {
-    "wipe": "mocha ./tests/database.refresh.js --reporter spec --log-level=warn --timeout 10000",
-    "test": "mocha ./tests/test.*.js --reporter spec --log-level=warn --timeout 10000",
+    "wipe": "mocha tests/database.refresh.js --reporter spec --log-level=warn --timeout 10000",
+    "test": "mocha tests/test.*.js --reporter spec --log-level=warn --timeout 10000",
     "dev": "node database.js && nodemon server.js"
   },
   "repository": {

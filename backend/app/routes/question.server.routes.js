@@ -1,4 +1,4 @@
-const question = require("app/controllers/question.server.controller.js");
+const question = require("backend/app/controllers/question.server.controller.js");
 
 
 module.exports = function (app){
