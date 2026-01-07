@@ -135,10 +135,83 @@ const logOut = async (req, res) => {
     }
 };
 
+const getAccount = (req, res) => {
+    try {
+        const userId = req.params.user_id;
+        const nowEpoch = Math.floor(Date.now() / 1000);
 
-const getAccount = (req, res) =>{
-    return res.sendStatus(500);
-}
+        const sqlUser = 'SELECT user_id, first_name, last_name, email FROM users WHERE user_id = ?';
+        db.get(sqlUser, [userId], (err, userRow) => {
+            if (err) return res.status(500).json({message: 'Database error', error: err.message});
+            if (!userRow) return res.status(404).json({error_message: 'User not found'});
+
+            const sqlSelling = `
+                SELECT items.*, u.first_name AS creator_first, u.last_name AS creator_last
+                FROM items
+                JOIN users u ON items.creator_id = u.user_id
+                WHERE items.creator_id = ?
+            `;
+            db.all(sqlSelling, [userId], (err, sellingRows) => {
+                if (err) return res.status(500).json({message: 'Database error', error: err.message});
+
+                const sqlBidding = `
+                    SELECT DISTINCT items.*, u.first_name AS creator_first, u.last_name AS creator_last
+                    FROM bids
+                    JOIN items ON bids.item_id = items.item_id
+                    JOIN users u ON items.creator_id = u.user_id
+                    WHERE bids.user_id = ?
+                `;
+                db.all(sqlBidding, [userId], (err, biddingRows) => {
+                    if (err) return res.status(500).json({message: 'Database error', error: err.message});
+
+                    const sqlEnded = `
+                        SELECT DISTINCT items.*, u.first_name AS creator_first, u.last_name AS creator_last
+                        FROM items
+                        JOIN users u ON items.creator_id = u.user_id
+                        LEFT JOIN bids b ON items.item_id = b.item_id
+                        WHERE items.end_date <= ? AND 
+                              (items.creator_id = ? OR b.user_id = ?)
+                    `;
+                    db.all(sqlEnded, [nowEpoch, userId, userId], (err, endedRows) => {
+                        if (err) return res.status(500).json({message: 'Database error', error: err.message});
+
+                        const mapItem = row => ({
+                            item_id: row.item_id,
+                            name: row.name,
+                            description: row.description,
+                            end_date: row.end_date,
+                            creator_id: row.creator_id,
+                            first_name: row.creator_first,
+                            last_name: row.creator_last
+                        });
+
+                        const response = {
+                            user_id: userRow.user_id,
+                            first_name: userRow.first_name,
+                            last_name: userRow.last_name,
+                            email: userRow.email,
+                            selling: sellingRows.map(mapItem),
+                            bidding_on: biddingRows.map(mapItem),
+                            auctions_ended: endedRows.map(mapItem)
+                        };
+
+                        return res.status(200).json(response);
+                    });
+                });
+            });
+        });
+
+    } catch (error) {
+        console.log(error.message);
+        return res.status(500).json({message: 'Server error', error: error.message});
+    }
+};
+
+module.exports = { getAccount };
+
+
+module.exports = { getAccount };
+
 
 
 module.exports = {
