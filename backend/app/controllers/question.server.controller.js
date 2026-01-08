@@ -20,7 +20,6 @@ const getItemQuestions = (req, res) => {
         db.all(questionsSQL, [itemID], (err, questions) => {
             if (err) return res.status(500).json({error_message: err.message})
 
-            console.log(questions);
             return res.status(200).json(questions)
         })
     });

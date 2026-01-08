@@ -84,7 +84,8 @@ const search = async (req, res) => {
         Promise.all(getBidPromises)
             .then(results => res.status(200).json(results))
             .catch(err => res.status(500).json({ error_message: 'Database error', error: err.message }));
-    });
+        });
+
 };
 
 const createItem = async (req, res) => {
