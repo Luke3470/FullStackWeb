@@ -1,74 +1,58 @@
 const joi = require('joi');
-const db = require('../../database');
+const model  = require('../models/question.server.model');
 
 const { getUserID } = require('../lib/utils');
 
-const getItemQuestions = (req, res) => {
-    itemID = req.params.item_id;
+const getItemQuestions = async (req, res) => {
+    const itemId = req.params.item_id;
+    try {
+        await model.getItemById(itemId);
+        const questions = await model.getQuestionsByItemId(itemId);
 
-    const itemExistSQL = 'Select * FROM items WHERE item_id = ?';
-
-    db.get(itemExistSQL, [itemID], (err, item) => {
-        if (err) return res.json(500).status({error_message: err.message})
-
-        if (!item) {
-            return res.status(404).json({error_message: 'Item not found'});
+        return res.status(200).json(questions);
+    } catch (err) {
+        if (err.status === 404 || err.message === 'Item not found') {
+            return res.status(404).json({ error_message: 'Item not found' });
         }
-
-        const questionsSQL = 'SELECT question_id, question AS question_text, answer AS answer_text FROM questions where item_id=? ORDER BY question_id DESC';
-
-        db.all(questionsSQL, [itemID], (err, questions) => {
-            if (err) return res.status(500).json({error_message: err.message})
-
-            return res.status(200).json(questions)
-        })
-    });
+        return res.status(500).json({ error_message: 'Database error', error: err.message });
+    }
 }
 
 const postItemQuestions = async (req, res) => {
     const schema = joi.object({
-        question_text: joi.string().required(),
+        question_text: joi.string().required()
     });
 
     const { error } = schema.validate(req.body);
-    if (error) {
-        return res.status(400).json({
-            error_message: error.message
-        });
-    }
+    if (error) return res.status(400).json({ error_message: error.message });
 
     const token = req.headers['x-authorization'];
-
-    let userID;
+    let userId;
     try {
-        userID = await getUserID(token);
+        userId = await getUserID(token);
     } catch (err) {
-        return res.status(401).json({error_message: "Invalid session token"});
+        return res.status(401).json({ error_message: 'Invalid session token' });
     }
 
-    const itemID = req.params.item_id;
+    const itemId = req.params.item_id;
 
-    db.get("SELECT * FROM items WHERE item_id = ?", [itemID], (err, item) => {
-            if (err) {
-                return res.status(500).json({error_message: err.message});
-            }
+    try {
+        const item = await model.getItemById(itemId);
 
-            if (!item) {
-                return res.status(404).json({error_message: "Item not found"});
-            }
-
-            if (item.creator_id === userID) {
-                return res.status(403).json({error_message: "You cannot ask a question on your own item"});
-            }
-
-            db.run(`INSERT INTO questions (question, asked_by, item_id)VALUES (?, ?, ?)`, [req.body.question_text, userID, itemID], function (err) {
-                    if (err) {return res.status(500).json({error_message: err.message});
-                    }
-                    return res.sendStatus(200);
-                }
-            );
+        if (item.creator_id === userId) {
+            return res.status(403).json({ error_message: 'You cannot ask a question on your own item' });
         }
-    );
+
+        await model.createQuestion(itemId, userId, req.body.question_text);
+
+        return res.sendStatus(200);
+
+    } catch (err) {
+        if (err.status === 404 || err.message === 'Item not found') {
+            return res.status(404).json({ error_message: 'Item not found' });
+        }
+        return res.status(500).json({ error_message: 'Database error', error: err.message });
+    }
 }
 
 
@@ -76,44 +60,38 @@ const postQuestionById = async (req, res) => {
     const schema = joi.object({
         answer_text: joi.string().required()
     });
-
     const { error } = schema.validate(req.body);
-    if (error) return res.status(400).json({error_message: error.message});
+    if (error) return res.status(400).json({ error_message: error.message });
 
-
-    const token =  req.headers['x-authorization'];
+    const token = req.headers['x-authorization'];
     if (!token) return res.sendStatus(401);
 
-    let userID;
+    let userId;
     try {
-        userID = await getUserID(token);
+        userId = await getUserID(token);
     } catch {
         return res.sendStatus(401);
     }
 
-    const questionID = req.params.question_id;
+    const questionId = req.params.question_id;
 
-    const sql = `SELECT q.question_id, q.item_id, i.creator_id FROM questions q JOIN items i ON q.item_id = i.item_id WHERE q.question_id = ?`;
+    try {
+        const question = await model.getQuestionWithItem(questionId);
 
-    db.get(sql, [questionID], (err, row) => {
-        if (err) return res.status(500).json({error_message: err.message});
-
-        if (!row) return res.sendStatus(404);
-
-        if (row.creator_id !== userID) {
+        if (question.creator_id !== userId) {
             return res.sendStatus(403);
         }
 
-        const updateSQL = `UPDATE questions SET answer = ? WHERE question_id = ?`;
+        await model.answerQuestion(questionId, req.body.answer_text);
 
-        db.run(updateSQL, [req.body.answer_text, questionID], function (err) {
-            if (err) {
-                return res.status(500).json({error_message: err.message});
-            }
+        return res.sendStatus(200);
 
-            return res.sendStatus(200);
-        });
-    });
+    } catch (err) {
+        if (err.status === 404) {
+            return res.sendStatus(404);
+        }
+        return res.status(500).json({ error_message: 'Database error', error: err.message });
+    }
 }
 
 module.exports = {
