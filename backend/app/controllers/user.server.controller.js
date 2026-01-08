@@ -6,217 +6,192 @@ const {getHash} = require("../lib/utils");
 const crypto = require('crypto');
 
 const createAccount = async (req, res) => {
+    const schema = joi.object({
+        first_name: joi.string().required(),
+        last_name: joi.string().required(),
+        email: joi.string().email().required(),
+        password: joi.string().min(8)
+            .max(32)
+            .pattern(new RegExp('(?=.*[a-z])'))
+            .pattern(new RegExp('(?=.*[A-Z])'))
+            .pattern(new RegExp('(?=.*\\d)'))
+            .pattern(new RegExp('(?=.*[!@#$%^&*])'))
+            .required()
+            .messages({
+                'string.pattern.base': `Password must include uppercase, lowercase, number, and special character (!@#$%^&*)`,
+                'string.empty': `Password cannot be empty`,
+                'string.min': `Password must be at least 8 characters long`,
+                'string.max': `Password cannot exceed 32 characters`,
+                'any.required': `Password is required`
+            }),
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) return res.status(400).send({ error_message: error.message });
+
+    const salt = crypto.randomBytes(64)
+    const hash = getHash(req.body.password, salt);
+
+    const account = {
+        first_name: req.body.first_name,
+        last_name: req.body.last_name,
+        email: req.body.email,
+        password: hash,
+        salt: salt,
+    };
+    let userId;
     try {
-        const schema = joi.object({
-            first_name: joi.string().required(),
-            last_name: joi.string().required(),
-            email: joi.string().email().required(),
-            password: joi.string().min(8)
-                .max(32)
-                .pattern(new RegExp('(?=.*[a-z])'))
-                .pattern(new RegExp('(?=.*[A-Z])'))
-                .pattern(new RegExp('(?=.*\\d)'))
-                .pattern(new RegExp('(?=.*[!@#$%^&*])'))
-                .required()
-                .messages({
-                    'string.pattern.base': `Password must include uppercase, lowercase, number, and special character (!@#$%^&*)`,
-                    'string.empty': `Password cannot be empty`,
-                    'string.min': `Password must be at least 8 characters long`,
-                    'string.max': `Password cannot exceed 32 characters`,
-                    'any.required': `Password is required`
-                }),
-        });
-
-        const { error } = schema.validate(req.body);
-        if (error) return res.status(400).send({ error_message: error.message });
-
-        const salt = crypto.randomBytes(64)
-        const hash = getHash(req.body.password, salt);
-
-        const account = {
-            first_name: req.body.first_name,
-            last_name: req.body.last_name,
-            email: req.body.email,
-            password: hash,
-            salt: salt,
-        };
-
-        const userId = await new Promise((resolve, reject) => {
+        userId = await new Promise((resolve, reject) => {
             const sql = 'INSERT INTO users (first_name, last_name, email, password, salt) VALUES (?,?,?,?,?)';
-            db.run(sql, [account.first_name, account.last_name, account.email, account.password, account.salt], function(err) {
+            db.run(sql, [account.first_name, account.last_name, account.email, account.password, account.salt], function (err) {
                 if (err) return reject(err);
                 resolve(this.lastID);
             });
         });
-
-        return res.status(201).send({ user_id: userId });
-
-    } catch (err) {
+    }catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
-            return res.status(400).send({ error_message: 'Email already exists' });
+            return res.status(400).send({error_message: 'Email already exists'});
         }
-        console.error(err.message);
-        return res.status(500).send({ message: 'Database error', error: err });
+        return res.status(500).send({error_message: err});
     }
+    return res.status(201).send({ user_id: userId });
 };
 
 
 const logIn = (req, res) => {
-    try {
-        const schema = joi.object({
-            email: joi.string().email().required(),
-            password: joi.string().required()
+
+    const schema = joi.object({
+        email: joi.string().email().required(),
+        password: joi.string().required()
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) return res.status(400).json({ error_message: error.message });
+
+    const sql = 'SELECT user_id, password, salt, session_token FROM users WHERE email = ?';
+    db.get(sql, [req.body.email], (err, row) => {
+        if (err) return res.status(400).json({ error_message: err.message });
+        if (!row) return res.status(404).json({ error_message: 'User not found' });
+
+        const salt = row.salt ? Buffer.from(row.salt, 'hex') : Buffer.from('');
+        const hashedPassword = getHash(req.body.password,salt);
+
+        if (row.password !== hashedPassword) {
+            return res.status(400).json({ error_message: 'Invalid password' });
+        }
+
+        if (row.session_token) {
+            return res.status(200).json({ user_id: row.user_id, session_token: row.session_token });
+        }
+
+        const token = crypto.randomBytes(16).toString('hex');
+        const token_sql = 'UPDATE users SET session_token=? WHERE user_id=?';
+        db.run(token_sql, [token, row.user_id], (err) => {
+            if (err) return res.status(400).json({ error_message: err.message });
+            return res.status(200).json({ user_id: row.user_id, session_token: token });
         });
-
-        const { error } = schema.validate(req.body);
-        if (error) return res.status(400).send({ error_message: error.message });
-
-        const sql = 'SELECT user_id, password, salt, session_token FROM users WHERE email = ?';
-        db.get(sql, [req.body.email], (err, row) => {
-            if (err) return res.status(400).send({ error_message: err.message });
-            if (!row) return res.status(404).send({ error_message: 'User not found' });
-
-            const salt = row.salt ? Buffer.from(row.salt, 'hex') : Buffer.from('');
-            const hashedPassword = getHash(req.body.password,salt);
-
-            if (row.password !== hashedPassword) {
-                return res.status(400).send({ error_message: 'Invalid password' });
-            }
-
-            if (row.session_token) {
-                return res.status(200).send({ user_id: row.user_id, session_token: row.session_token });
-            }
-
-            const token = crypto.randomBytes(16).toString('hex');
-            const token_sql = 'UPDATE users SET session_token=? WHERE user_id=?';
-            db.run(token_sql, [token, row.user_id], (err) => {
-                if (err) return res.status(400).send({ error_message: err.message });
-                return res.status(200).send({ user_id: row.user_id, session_token: token });
-            });
-        });
-
-    } catch (error) {
-        return res.status(500).send({ error_message: error.message });
-    }
+    });
 };
 
 
 const logOut = async (req, res) => {
-    try {
-        const token = req.headers['x-authorization'];
-        if (!token) {
-            return res.status(401).send({ message: 'No authentication token provided' });
-        }
-
-        const user = await new Promise((resolve, reject) => {
-            const sql = 'SELECT user_id FROM users WHERE session_token = ?';
-            db.get(sql, [token], (err, row) => {
-                if (err) return reject(err);
-                resolve(row);
-            });
-        });
-
-        if (!user) {
-            return res.status(401).send({ message: 'Invalid or expired session token' });
-        }
-
-        await new Promise((resolve, reject) => {
-            const sql = 'UPDATE users SET session_token = NULL WHERE user_id = ?';
-            db.run(sql, [user.user_id], (err) => {
-                if (err) return reject(err);
-                resolve();
-            });
-        });
-
-        return res.status(200).send({ message: 'Logged out successfully' });
-
-    } catch (err) {
-        return res.status(500).send({ error_message: err.message });
+    const token = req.headers['x-authorization'];
+    if (!token) {
+        return res.status(401).json({ message: 'No authentication token provided' });
     }
+
+    const user = await new Promise((resolve, reject) => {
+        const sql = 'SELECT user_id FROM users WHERE session_token = ?';
+        db.get(sql, [token], (err, row) => {
+            if (err) return reject(err);
+            resolve(row);
+        });
+    });
+
+    if (!user) {
+        return res.status(401).json({ message: 'Invalid or expired session token' });
+    }
+
+    await new Promise((resolve, reject) => {
+        const sql = 'UPDATE users SET session_token = NULL WHERE user_id = ?';
+        db.run(sql, [user.user_id], (err) => {
+            if (err) return reject(err);
+            resolve();
+        });
+    });
+
+    return res.status(200).json({ message: 'Logged out successfully' });
 };
 
 const getAccount = (req, res) => {
-    try {
-        const userId = req.params.user_id;
-        const nowEpoch = Math.floor(Date.now() / 1000);
+    const userId = req.params.user_id;
+    const nowEpoch = Math.floor(Date.now() / 1000);
 
-        const sqlUser = 'SELECT user_id, first_name, last_name, email FROM users WHERE user_id = ?';
-        db.get(sqlUser, [userId], (err, userRow) => {
+    const sqlUser = 'SELECT user_id, first_name, last_name, email FROM users WHERE user_id = ?';
+    db.get(sqlUser, [userId], (err, userRow) => {
+        if (err) return res.status(500).json({message: 'Database error', error: err.message});
+        if (!userRow) return res.status(404).json({error_message: 'User not found'});
+
+        const sqlSelling = `
+            SELECT items.*, u.first_name AS creator_first, u.last_name AS creator_last
+            FROM items
+            JOIN users u ON items.creator_id = u.user_id
+            WHERE items.creator_id = ?
+        `;
+        db.all(sqlSelling, [userId], (err, sellingRows) => {
             if (err) return res.status(500).json({message: 'Database error', error: err.message});
-            if (!userRow) return res.status(404).json({error_message: 'User not found'});
 
-            const sqlSelling = `
-                SELECT items.*, u.first_name AS creator_first, u.last_name AS creator_last
-                FROM items
+            const sqlBidding = `
+                SELECT DISTINCT items.*, u.first_name AS creator_first, u.last_name AS creator_last
+                FROM bids
+                JOIN items ON bids.item_id = items.item_id
                 JOIN users u ON items.creator_id = u.user_id
-                WHERE items.creator_id = ?
+                WHERE bids.user_id = ?
             `;
-            db.all(sqlSelling, [userId], (err, sellingRows) => {
+            db.all(sqlBidding, [userId], (err, biddingRows) => {
                 if (err) return res.status(500).json({message: 'Database error', error: err.message});
 
-                const sqlBidding = `
+                const sqlEnded = `
                     SELECT DISTINCT items.*, u.first_name AS creator_first, u.last_name AS creator_last
-                    FROM bids
-                    JOIN items ON bids.item_id = items.item_id
+                    FROM items
                     JOIN users u ON items.creator_id = u.user_id
-                    WHERE bids.user_id = ?
+                    LEFT JOIN bids b ON items.item_id = b.item_id
+                    WHERE items.end_date <= ? AND 
+                          (items.creator_id = ? OR b.user_id = ?)
                 `;
-                db.all(sqlBidding, [userId], (err, biddingRows) => {
+                db.all(sqlEnded, [nowEpoch, userId, userId], (err, endedRows) => {
                     if (err) return res.status(500).json({message: 'Database error', error: err.message});
 
-                    const sqlEnded = `
-                        SELECT DISTINCT items.*, u.first_name AS creator_first, u.last_name AS creator_last
-                        FROM items
-                        JOIN users u ON items.creator_id = u.user_id
-                        LEFT JOIN bids b ON items.item_id = b.item_id
-                        WHERE items.end_date <= ? AND 
-                              (items.creator_id = ? OR b.user_id = ?)
-                    `;
-                    db.all(sqlEnded, [nowEpoch, userId, userId], (err, endedRows) => {
-                        if (err) return res.status(500).json({message: 'Database error', error: err.message});
-
-                        const mapItem = row => ({
-                            item_id: row.item_id,
-                            name: row.name,
-                            description: row.description,
-                            end_date: row.end_date,
-                            creator_id: row.creator_id,
-                            first_name: row.creator_first,
-                            last_name: row.creator_last
-                        });
-
-                        const response = {
-                            user_id: userRow.user_id,
-                            first_name: userRow.first_name,
-                            last_name: userRow.last_name,
-                            email: userRow.email,
-                            selling: sellingRows.map(mapItem),
-                            bidding_on: biddingRows.map(mapItem),
-                            auctions_ended: endedRows.map(mapItem)
-                        };
-
-                        return res.status(200).json(response);
+                    const mapItem = row => ({
+                        item_id: row.item_id,
+                        name: row.name,
+                        description: row.description,
+                        end_date: row.end_date,
+                        creator_id: row.creator_id,
+                        first_name: row.creator_first,
+                        last_name: row.creator_last
                     });
+
+                    const response = {
+                        user_id: userRow.user_id,
+                        first_name: userRow.first_name,
+                        last_name: userRow.last_name,
+                        email: userRow.email,
+                        selling: sellingRows.map(mapItem),
+                        bidding_on: biddingRows.map(mapItem),
+                        auctions_ended: endedRows.map(mapItem)
+                    };
+
+                    return res.status(200).json(response);
                 });
             });
         });
-
-    } catch (error) {
-        console.log(error.message);
-        return res.status(500).json({message: 'Server error', error: error.message});
-    }
+    });
 };
 
-module.exports = { getAccount };
-
-
-module.exports = { getAccount };
-
-
-
 module.exports = {
-    createAccount: createAccount,
-    logIn: logIn,
-    logOut: logOut,
-    getAccount: getAccount
+    createAccount,
+    logIn,
+    logOut,
+    getAccount
 }
