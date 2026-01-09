@@ -2,7 +2,7 @@ const db = require('../../database');
 const { getUserID } = require('../lib/utils');
 
 async function searchItems({ q, status, limit, offset, token }) {
-    const nowEpoch = Math.floor(Date.now() / 1000);
+    const now = Date.now();
     let userID;
 
     if (status === 'BID' || status === 'OPEN') {
@@ -20,10 +20,10 @@ async function searchItems({ q, status, limit, offset, token }) {
 
     if (status === 'OPEN') {
         sql += ' AND items.end_date > ? AND items.creator_id == ?';
-        params.push(nowEpoch, userID);
+        params.push(now, userID);
     } else if (status === 'ARCHIVE') {
         sql += ' AND items.end_date <= ?';
-        params.push(nowEpoch);
+        params.push(now);
     } else if (status === 'BID') {
         sql += ' AND items.item_id IN (SELECT item_id FROM bids WHERE user_id = ?)';
         params.push(userID);
@@ -184,7 +184,7 @@ async function getItemById(itemId) {
 }
 
 async function getItemForBidding(itemId, userID) {
-    const item = await new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
         db.get(
             'SELECT * FROM items WHERE item_id = ?',
             [itemId],
@@ -199,8 +199,6 @@ async function getItemForBidding(itemId, userID) {
             }
         );
     });
-
-    return item;
 }
 
 async function getHighestBid(itemId) {

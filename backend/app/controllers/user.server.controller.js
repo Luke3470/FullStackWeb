@@ -29,9 +29,7 @@ const createAccount = async (req, res) => {
     });
 
     const { error } = schema.validate(req.body);
-    if (error) {
-        return res.status(400).json({ error_message: error.message });
-    }
+    if (error) return res.status(400).json({ error_message: error.message });
 
     try {
         const userId = await model.createUser({
@@ -40,14 +38,11 @@ const createAccount = async (req, res) => {
             email: req.body.email,
             password: req.body.password
         });
-
         return res.status(201).json({ user_id: userId });
-
     } catch (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
             return res.status(400).json({ error_message: 'Email already exists' });
         }
-
         return res.status(500).json({ error_message: err.message || err });
     }
 };
@@ -61,7 +56,6 @@ const logIn = async (req, res) => {
 
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ error_message: error.message });
-
 
     try {
         const user = await model.getUserByEmail(req.body.email);
@@ -156,15 +150,12 @@ const getAccount = async (req, res) => {
             bidding_on: bidding.map(mapItem),
             auctions_ended: ended.map(mapItem)
         };
-        console.log(response)
         return res.status(200).json(response);
 
     } catch (err) {
-        console.error('DB Error:', err);
-        if (err.status === 404 || err.message === 'User not found') {
+        if (err.status === 404) {
             return res.status(404).json({ error_message: 'User not found' });
         }
-
         return res.status(500).json({ error_message: 'Database error', error: err.message });
     }
 };

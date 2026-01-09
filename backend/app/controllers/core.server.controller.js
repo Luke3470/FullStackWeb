@@ -43,9 +43,7 @@ const createItem = async (req, res) => {
     });
 
     const { error } = schema.validate(req.body);
-    if (error) {
-        return res.status(400).json({ error_message: error.message });
-    }
+    if (error) return res.status(400).json({ error_message: error.message });
 
     try {
         const itemId = await model.createItem({
@@ -58,9 +56,7 @@ const createItem = async (req, res) => {
 
         return res.status(201).json({ item_id: itemId });
     } catch (err) {
-        return res.status(500).json({
-            error_message: err.message || 'Database error'
-        });
+        return res.status(500).json({error_message: err.message || 'Database error'});
     }
 };
 
@@ -99,13 +95,11 @@ const placeBid = async (req, res) => {
             amount: joi.number().integer().min(1).required()
         });
 
-        const { error, value } = schema.validate(req.body);
-        if (error) {
-            return res.status(400).json({ error_message: error.message });
-        }
+        const { error } = schema.validate(req.body);
+        if (error) return res.status(400).json({ error_message: error.message });
 
         const highestBid = await model.getHighestBid(itemId);
-        const bidAmount = Number(value.amount);
+        const bidAmount = Number(req.body.amount);
         const startingBid = Number(item.starting_bid);
 
         const isInvalid =
