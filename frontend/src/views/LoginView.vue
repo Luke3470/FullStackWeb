@@ -5,6 +5,9 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter, useRoute } from 'vue-router'
+import {useSessionStore} from "@/stores/session.ts";
+
+const session = useSessionStore()
 
 const router = useRouter()
 const route = useRoute()
@@ -14,6 +17,7 @@ const password = ref('')
 
 const handleLogin = () => {
   localStorage.setItem('session_token', 'fake-token')
+  session.setLoggedIn(true)
   const redirectTo = route.query.redirect as string || '/'
   router.push(redirectTo)
 }

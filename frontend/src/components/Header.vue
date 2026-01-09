@@ -5,12 +5,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { useRouter, useRoute } from 'vue-router'
 import ModeToggle from '@/components/ModeToggle.vue'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
+import { useSessionStore } from '../stores/session.ts'
+
+const session = useSessionStore()
+const loggedIn = computed(() => session.loggedIn)
 
 const router = useRouter()
 const route = useRoute()
 
-const loggedIn = ref(!!localStorage.getItem('session_token'))
 const searchQuery = ref('')
 
 const goToLogin = () => {
@@ -35,7 +38,7 @@ const handleSearchKey = (event: KeyboardEvent) => {
 
 const handleLogout = () => {
   localStorage.removeItem('session_token')
-  loggedIn.value = false
+  session.setLoggedIn(false)
   router.push({ name: 'home' })
 }
 
