@@ -1,3 +1,4 @@
+const { RegExpMatcher, TextCensor, englishDataset, englishRecommendedTransformers} = require('obscenity');
 const joi = require('joi');
 const model  = require('../models/question.server.model');
 
@@ -23,8 +24,14 @@ const postItemQuestions = async (req, res) => {
         question_text: joi.string().required()
     });
 
+    const matcher = new RegExpMatcher({
+        ...englishDataset.build(),
+        ...englishRecommendedTransformers
+    });
+
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ error_message: error.message });
+    if (matcher.hasMatch(req.body.question_text)) return res.status(400).json({ error_message: "questions should not include Profanity in question text" });
 
     const token = req.headers['x-authorization'];
     let userId;
@@ -60,8 +67,15 @@ const postQuestionById = async (req, res) => {
     const schema = joi.object({
         answer_text: joi.string().required()
     });
+
+    const matcher = new RegExpMatcher({
+        ...englishDataset.build(),
+        ...englishRecommendedTransformers
+    });
+
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ error_message: error.message });
+    if (matcher.hasMatch(req.body.answer_text)) return res.status(400).json({ error_message: "Answers should not include Profanity in answer text" });
 
     const token = req.headers['x-authorization'];
     if (!token) return res.sendStatus(401);

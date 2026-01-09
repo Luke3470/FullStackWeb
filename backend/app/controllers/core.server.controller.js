@@ -1,5 +1,5 @@
+const { RegExpMatcher, TextCensor, englishDataset,englishRecommendedTransformers} = require('obscenity');
 const joi = require('joi');
-
 const { getUserID } = require('../lib/utils');
 const model  = require('../models/core.server.model');
 
@@ -41,9 +41,15 @@ const createItem = async (req, res) => {
                 return timestamp;
             }, 'future timestamp validation')
     });
+    const matcher  = new RegExpMatcher({
+        ...englishDataset.build(),
+        ...englishRecommendedTransformers
+    });
 
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ error_message: error.message });
+    if (matcher.hasMatch(req.body.name)) return res.status(400).json({ error_message: "Item should not include Profanity in name" });
+    if (matcher.hasMatch(req.body.description)) return res.status(400).json({ error_message: "Item should not include Profanity in description" });
 
     try {
         const itemId = await model.createItem({
