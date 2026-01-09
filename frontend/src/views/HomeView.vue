@@ -1,15 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { toast } from 'vue-sonner'
+import { searchItems } from '../services/core.service.ts'
+import { getTimeLeft, UseNavigation } from  '../services/services.config.ts'
 
-const endingSoon = ref([
-  { id: 1, title: 'GPU RTX 3060', image: 'https://via.placeholder.com/600x300', timeLeft: '2h 30m' },
-  { id: 2, title: 'Intel i7 CPU', image: 'https://via.placeholder.com/600x300', timeLeft: '4h 15m' },
-  { id: 3, title: 'Corsair 16GB RAM', image: 'https://via.placeholder.com/600x300', timeLeft: '1h 50m' },
-  { id: 4, title: 'Samsung SSD 1TB', image: 'https://via.placeholder.com/600x300', timeLeft: '3h 10m' },
-])
+const { goToItem } = UseNavigation()
 
+const endingSoon = ref<any[]>([])
 const currentIndex = ref(0)
 
 const prevItem = () => {
@@ -19,6 +18,28 @@ const prevItem = () => {
 const nextItem = () => {
   currentIndex.value = (currentIndex.value + 1) % endingSoon.value.length
 }
+
+const loadEndingSoon = async () => {
+  try {
+    const data = await searchItems({ limit: 4, offset: 0 })
+    endingSoon.value = Array.isArray(data) ? data : []
+    currentIndex.value = 0
+  } catch (err: any) {
+    console.error('Failed to load ending soon items', err)
+    toast.error(err?.error_message || 'Unable to load ending soon items')
+  }
+}
+
+let timer: number
+onMounted(() => {
+  loadEndingSoon()
+  timer = setInterval(() => {
+    endingSoon.value = [...endingSoon.value]
+  }, 1000)
+})
+
+onBeforeUnmount(() => clearInterval(timer))
+
 </script>
 
 <template>
@@ -30,36 +51,43 @@ const nextItem = () => {
 
     <h2 class="text-2xl font-bold mt-6 mb-4 max-w-6xl mx-auto">Ending Soon!</h2>
 
-    <div class="max-w-3xl mx-auto relative flex items-center">
+    <div v-if="endingSoon.length === 0" class="text-muted-foreground">
+      No items ending soon.
+    </div>
 
-      <Button class="absolute left-0 z-10" variant="outline" @click="prevItem">
-        ‹
-      </Button>
+    <div v-else class="max-w-3xl mx-auto relative flex items-center">
+      <Button class="absolute left-0 z-10" variant="outline" @click="prevItem">‹</Button>
 
       <Card class="w-full mx-6 shadow-lg">
         <CardHeader>
-          <CardTitle class="text-lg font-semibold">{{ endingSoon[currentIndex].title }}</CardTitle>
+          <CardTitle class="text-lg font-semibold">{{ endingSoon[currentIndex].name }}</CardTitle>
         </CardHeader>
         <CardContent class="flex flex-col gap-2">
           <img
-              :src="endingSoon[currentIndex].image"
-              alt=""
-              class="w-full h-64 object-cover rounded-md"
+              src="https://via.placeholder.com/600x300"
+          alt="Item image"
+          class="w-full h-64 object-cover rounded-md"
           />
-          <p class="text-sm text-muted-foreground">Time left: {{ endingSoon[currentIndex].timeLeft }}</p>
-          <Button class="mt-2 w-full">Bid Now</Button>
+          <p class="text-sm text-muted-foreground">{{ endingSoon[currentIndex].description }}</p>
+          <p class="font-medium">
+            Current Bid: <span class="text-green-600 font-bold">${{ endingSoon[currentIndex].current_bid }}</span>
+          </p>
+          <p class="text-purple-600 font-semibold" >
+            Time Left: {{ getTimeLeft(endingSoon[currentIndex].end_date) }}
+          </p>
+          <Button class="mt-2 w-full" @click="goToItem(endingSoon[currentIndex].item_id)">
+            Bid Now
+          </Button>
         </CardContent>
       </Card>
 
-      <Button class="absolute right-0 z-10" variant="outline" @click="nextItem">
-        ›
-      </Button>
+      <Button class="absolute right-0 z-10" variant="outline" @click="nextItem">›</Button>
     </div>
 
     <div class="flex justify-center mt-4 space-x-2">
       <span
           v-for="(item, index) in endingSoon"
-          :key="item.id"
+          :key="item.item_id"
           @click="currentIndex = index"
           class="w-3 h-3 rounded-full cursor-pointer"
           :class="currentIndex === index ? 'bg-purple-500' : 'bg-purple-300'"

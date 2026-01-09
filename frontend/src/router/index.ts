@@ -14,7 +14,7 @@ const routes =[
   { path: '/item/:id', name: 'item', component: ItemView },
   { path: '/search', name: 'search', component: SearchView},
   { path: '/user/:id', name: 'user', component: UserView },
-  { path: '/create', name: 'create', component: ItemView },
+  { path: '/create', name: 'create', component: CreateItemView },
 ]
 
 const router = createRouter({

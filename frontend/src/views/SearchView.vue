@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { searchItems } from '../services/core.service.ts'
+import { performSearch } from '../services/core.service.ts'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
+import { getTimeLeft, UseNavigation } from  '../services/services.config.ts'
+
+const { goToItem } = UseNavigation()
 
 const route = useRoute()
 const router = useRouter()
@@ -17,25 +20,6 @@ const page = ref(1)
 
 const results = ref<any[]>([])
 
-function getTimeLeft(endEpoch: number) {
-  const now = Date.now()
-  let diff = endEpoch - now
-  if (diff <= 0) return "Ended"
-
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  diff -= days * 1000 * 60 * 60 * 24
-
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  diff -= hours * 1000 * 60 * 60
-
-  const minutes = Math.floor(diff / (1000 * 60))
-  diff -= minutes * 1000 * 60
-
-  const seconds = Math.floor(diff / 1000)
-
-  return `${days}d ${hours}h ${minutes}m ${seconds}s`
-}
-
 let timer: number
 onMounted(() => {
   timer = setInterval(() => {
@@ -43,27 +27,6 @@ onMounted(() => {
   }, 1000)
 })
 onBeforeUnmount(() => clearInterval(timer))
-
-const performSearch = async () => {
-  try {
-    const query = searchQuery.value
-
-    const data = await searchItems({
-      q: query || undefined,
-      status: statusFilter.value || undefined,
-      limit: limit.value,
-      offset: offset.value,
-    })
-
-    results.value = Array.isArray(data) ? data : []
-  } catch (err) {
-    console.error("Search failed:", err.error_message)
-    results.value = []
-
-    const message = err?.error_message || "Unable to fetch results from the server."
-    toast.error(message)
-  }
-}
 
 
 watch(
@@ -73,7 +36,7 @@ watch(
       statusFilter.value = (newStatus as string) || ''
       offset.value = 0
       page.value = 1
-      performSearch()
+      performSearch({ searchQuery, statusFilter, limit, offset, results })
     },
     { immediate: true }
 )
@@ -101,6 +64,14 @@ const prevPage = () => {
     performSearch()
   }
 }
+
+const setStatus = (status: string) => {
+  statusFilter.value = status
+  offset.value = 0
+  page.value = 1
+  performSearch({ searchQuery, statusFilter, limit, offset, results })
+}
+
 </script>
 
 <template>
@@ -113,10 +84,10 @@ const prevPage = () => {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuItem @click="statusFilter = ''; performSearch()">All</DropdownMenuItem>
-          <DropdownMenuItem @click="statusFilter = 'BID'; performSearch()">BID</DropdownMenuItem>
-          <DropdownMenuItem @click="statusFilter = 'OPEN'; performSearch()">OPEN</DropdownMenuItem>
-          <DropdownMenuItem @click="statusFilter = 'ARCHIVE'; performSearch()">ARCHIVE</DropdownMenuItem>
+          <DropdownMenuItem @click="setStatus('')">All</DropdownMenuItem>
+          <DropdownMenuItem @click="setStatus('BID')">BID</DropdownMenuItem>
+          <DropdownMenuItem @click="setStatus('OPEN')">OPEN</DropdownMenuItem>
+          <DropdownMenuItem @click="setStatus('ARCHIVE')">ARCHIVE</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
@@ -130,6 +101,7 @@ const prevPage = () => {
           v-for="item in results"
           :key="item.item_id"
           class="p-4 border rounded-md shadow-sm bg-background"
+          @click="goToItem(item.item_id)"
       >
         <h3 class="text-xl font-semibold mb-1">{{ item.name }}</h3>
         <p class="text-sm text-muted-foreground mb-2">{{ item.description }}</p>
@@ -149,3 +121,5 @@ const prevPage = () => {
     </div>
   </div>
 </template>
+
+
