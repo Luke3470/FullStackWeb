@@ -1,20 +1,51 @@
 <script setup lang="ts">
-import { NavigationMenu, NavigationMenuItem, NavigationMenuLink } from '@/components/ui/navigation-menu'
+import { NavigationMenu, NavigationMenuLink } from '@/components/ui/navigation-menu'
 import { Button } from '@/components/ui/button'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { useRouter } from 'vue-router'
+import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { useRouter, useRoute } from 'vue-router'
 import ModeToggle from '@/components/ModeToggle.vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const router = useRouter()
-const loggedIn = ref(!!localStorage.getItem('session_token'))
+const route = useRoute()
 
+const loggedIn = ref(!!localStorage.getItem('session_token'))
 const searchQuery = ref('')
 
 const goToLogin = () => {
-  console.log('Redirecting to login...');
-  router.push({ name: 'login' });
+  router.push({ name: 'login', query: { redirect: route.fullPath } })
 }
+const goHome = () => router.push({ name: 'home' })
+
+const goSearch = () => {
+  if (!searchQuery.value) {
+    router.push({ name: 'search'})
+  }else{
+    router.push({ name: 'search', query: { q: searchQuery.value } })
+  }
+}
+
+const handleSearchKey = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    event.preventDefault()
+    goSearch()
+  }
+}
+
+const handleLogout = () => {
+  localStorage.removeItem('session_token')
+  loggedIn.value = false
+  router.push({ name: 'home' })
+}
+
+watch(
+    () => route.fullPath,
+    () => {
+      searchQuery.value = ''
+    }
+)
+
 </script>
 
 <template>
@@ -23,8 +54,8 @@ const goToLogin = () => {
 
       <div class="flex items-center space-x-6">
         <NavigationMenu>
-          <NavigationMenuLink>Auctionary</NavigationMenuLink>
-          <NavigationMenuLink>Search</NavigationMenuLink>
+          <NavigationMenuLink @click.prevent="goHome">Auctionary</NavigationMenuLink>
+          <NavigationMenuLink @click.prevent="goSearch">Search</NavigationMenuLink>
         </NavigationMenu>
       </div>
 
@@ -33,16 +64,28 @@ const goToLogin = () => {
             v-model="searchQuery"
             type="text"
             placeholder="Search..."
+            @keydown="handleSearchKey"
             class="w-full px-4 py-2 rounded-md border border-border bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
 
       <div class="flex items-center space-x-4">
         <ModeToggle />
-        <Button v-if="!loggedIn" variant="default" @click="goToLogin">Login</Button>
-        <Avatar v-else>
-          <AvatarFallback>{{ user.name.charAt(0) }}</AvatarFallback>
-        </Avatar>
+
+        <Button v-if="!loggedIn" variant="default" @click="goToLogin">
+          Login
+        </Button>
+
+        <DropdownMenu v-else>
+          <DropdownMenuTrigger as-child>
+            <Avatar class="cursor-pointer">
+              <AvatarFallback>U</AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem @click="handleLogout">Logout</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
     </div>
