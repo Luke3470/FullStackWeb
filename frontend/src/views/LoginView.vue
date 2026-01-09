@@ -33,7 +33,7 @@ const goSignUp = () => {
 
     <Card class="w-full max-w-md shadow-lg relative z-10 mt-24">
       <CardHeader>
-        <CardTitle class="text-center text-2xl">Login</CardTitle>
+        <CardTitle class="text-center text-2xl">Log In</CardTitle>
       </CardHeader>
 
       <CardContent class="flex flex-col gap-4">

@@ -5,6 +5,7 @@ import ItemView from '../views/ItemView.vue'
 import SearchView from '../views/SearchView.vue'
 import UserView from '../views/UserView.vue'
 import SignUpView from '../views/SignUpView.vue'
+import CreateItemView from '../views/CreateItemView.vue'
 
 const routes =[
   { path: '/', name: 'home', component: HomeView },
@@ -13,6 +14,7 @@ const routes =[
   { path: '/item/:id', name: 'item', component: ItemView },
   { path: '/search', name: 'search', component: SearchView},
   { path: '/user/:id', name: 'user', component: UserView },
+  { path: '/create', name: 'create', component: ItemView },
 ]
 
 const router = createRouter({

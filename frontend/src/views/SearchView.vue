@@ -1,59 +1,151 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { searchItems } from '../services/core.service.ts'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
+import { toast } from 'vue-sonner'
 
-// Router
 const route = useRoute()
 const router = useRouter()
 
-
 const searchQuery = ref('')
+const statusFilter = ref('')
+const limit = ref(10)
+const offset = ref(0)
+const page = ref(1)
 
-const results = ref<string[]>([])
+const results = ref<any[]>([])
 
-const performSearch = (query: string) => {
-  if (!query) {
-    results.value = []
-    return
-  }
-  results.value = [
-    `Result for "${query}" 1`,
-    `Result for "${query}" 2`,
-    `Result for "${query}" 3`,
-  ]
+function getTimeLeft(endEpoch: number) {
+  const now = Date.now()
+  let diff = endEpoch - now
+  if (diff <= 0) return "Ended"
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  diff -= days * 1000 * 60 * 60 * 24
+
+  const hours = Math.floor(diff / (1000 * 60 * 60))
+  diff -= hours * 1000 * 60 * 60
+
+  const minutes = Math.floor(diff / (1000 * 60))
+  diff -= minutes * 1000 * 60
+
+  const seconds = Math.floor(diff / 1000)
+
+  return `${days}d ${hours}h ${minutes}m ${seconds}s`
 }
 
+let timer: number
+onMounted(() => {
+  timer = setInterval(() => {
+    results.value = [...results.value]
+  }, 1000)
+})
+onBeforeUnmount(() => clearInterval(timer))
+
+const performSearch = async () => {
+  try {
+    const query = searchQuery.value
+
+    const data = await searchItems({
+      q: query || undefined,
+      status: statusFilter.value || undefined,
+      limit: limit.value,
+      offset: offset.value,
+    })
+
+    results.value = Array.isArray(data) ? data : []
+  } catch (err) {
+    console.error("Search failed:", err.error_message)
+    results.value = []
+
+    const message = err?.error_message || "Unable to fetch results from the server."
+    toast.error(message)
+  }
+}
+
+
 watch(
-    () => route.query.q,
-    (newQuery) => {
-      searchQuery.value = newQuery as string || ''
-      performSearch(searchQuery.value)
+    [() => route.query.q, () => route.query.status],
+    ([newQuery, newStatus]) => {
+      searchQuery.value = (newQuery as string) || ''
+      statusFilter.value = (newStatus as string) || ''
+      offset.value = 0
+      page.value = 1
+      performSearch()
     },
     { immediate: true }
 )
 
-const handleEnter = () => {
+const handleEnter = (event: KeyboardEvent) => {
   if (event.key === 'Enter') {
     event.preventDefault()
-    router.push({ name: 'search', query: { q: searchQuery.value } })
+    router.push({
+      name: 'search',
+      query: { q: searchQuery.value, status: statusFilter.value }
+    })
+  }
+}
+
+const nextPage = () => {
+  offset.value += limit.value
+  page.value += 1
+  performSearch()
+}
+
+const prevPage = () => {
+  if (offset.value >= limit.value) {
+    offset.value -= limit.value
+    page.value -= 1
+    performSearch()
   }
 }
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto mt-12 px-4">
+    <div class="flex justify-between items-center mb-4">
+      <DropdownMenu>
+        <DropdownMenuTrigger as-child>
+          <Button variant="outline">
+            Status: {{ statusFilter || 'All' }}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem @click="statusFilter = ''; performSearch()">All</DropdownMenuItem>
+          <DropdownMenuItem @click="statusFilter = 'BID'; performSearch()">BID</DropdownMenuItem>
+          <DropdownMenuItem @click="statusFilter = 'OPEN'; performSearch()">OPEN</DropdownMenuItem>
+          <DropdownMenuItem @click="statusFilter = 'ARCHIVE'; performSearch()">ARCHIVE</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+
     <div v-if="results.length === 0" class="text-center text-muted-foreground">
       No results found.
     </div>
 
-    <ul v-else class="space-y-2">
+    <ul v-else class="space-y-4 mb-6">
       <li
-          v-for="(item, index) in results"
-          :key="index"
-          class="p-4 border rounded-md hover:bg-accent/10"
+          v-for="item in results"
+          :key="item.item_id"
+          class="p-4 border rounded-md shadow-sm bg-background"
       >
-        {{ item }}
+        <h3 class="text-xl font-semibold mb-1">{{ item.name }}</h3>
+        <p class="text-sm text-muted-foreground mb-2">{{ item.description }}</p>
+        <p class="font-medium">
+          Current Bid: <span class="text-green-600 font-bold">${{ item.current_bid }}</span>
+        </p>
+        <p class="text-purple-600 font-semibold">
+          Time Left: {{ getTimeLeft(item.end_date) }}
+        </p>
       </li>
     </ul>
+
+    <div class="flex justify-between items-center">
+      <Button :disabled="page === 1" @click="prevPage">Previous</Button>
+      <span class="text-sm text-muted-foreground">Page {{ page }}</span>
+      <Button :disabled="results.length < limit" @click="nextPage">Next</Button>
+    </div>
   </div>
 </template>
