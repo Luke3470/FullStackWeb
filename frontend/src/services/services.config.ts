@@ -30,7 +30,7 @@ export async function get<T>(endpoint: string, auth: string | null): Promise<T> 
 }
 
 
-export async function post<T>(endpoint: string, body: any, auth:string | null): Promise<T> {
+export async function post<T>(endpoint: string, body: any | null, auth: string | null): Promise<T> {
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     }
@@ -38,18 +38,26 @@ export async function post<T>(endpoint: string, body: any, auth:string | null): 
     if (auth) {
         headers['X-Authorization'] = auth
     }
-    const res = await fetch(`${BASE_API_URL}/${endpoint}`, {
-        method: 'POST',
-        headers: headers,
-        body: JSON.stringify(body),
-    })
 
-    if (!res.ok) {
-        throw new Error(`POST ${endpoint} failed: ${res.statusText}`)
+    const options: RequestInit = {
+        method: 'POST',
+        headers,
     }
 
-    return res.json()
+    if (body !== null) {
+        options.body = JSON.stringify(body)
+    }
+
+    const res = await fetch(`${BASE_API_URL}/${endpoint}`, options)
+    const data = await res.json()
+
+    if (!res.ok) {
+        throw data
+    }
+
+    return data
 }
+
 
 export function getTimeLeft(endEpoch: number) {
     const now = Date.now()

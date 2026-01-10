@@ -49,6 +49,7 @@ const createAccount = async (req, res) => {
 
 
 const logIn = async (req, res) => {
+    console.log(req.body);
     const schema = joi.object({
         email: joi.string().email().required(),
         password: joi.string().required()

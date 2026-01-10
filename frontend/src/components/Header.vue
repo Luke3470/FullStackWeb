@@ -7,6 +7,7 @@ import { useRouter, useRoute } from 'vue-router'
 import ModeToggle from '@/components/ModeToggle.vue'
 import { ref, watch, computed } from 'vue'
 import { useSessionStore } from '../stores/session.ts'
+import { logOut } from  '../services/user.service.ts'
 
 const session = useSessionStore()
 const loggedIn = computed(() => session.loggedIn)
@@ -36,10 +37,25 @@ const handleSearchKey = (event: KeyboardEvent) => {
   }
 }
 
-const handleLogout = () => {
-  localStorage.removeItem('session_token')
-  session.setLoggedIn(false)
-  router.push({ name: 'home' })
+const handleLogout = async () => {
+  try {
+    const token = session.authToken ?? localStorage.getItem('session_token')
+    const response = await logOut(token)
+
+    if (response?.message === "Logged out successfully") {
+      localStorage.removeItem('user_id')
+      localStorage.removeItem('session_token')
+
+      session.setLoggedIn(false)
+      session.authToken = null
+
+      console.log("Logout complete. Storage cleared.")
+    } else {
+      console.error("Logout failed", response)
+    }
+  } catch (err: any) {
+    console.error("Logout error:", err)
+  }
 }
 
 watch(
@@ -86,7 +102,7 @@ watch(
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem @click="handleLogout">Logout</DropdownMenuItem>
+            <DropdownMenuItem @click="handleLogout">Log Out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
