@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { toast } from 'vue-sonner'
 import { searchItems } from '../services/core.service.ts'
-import { getTimeLeft, UseNavigation } from  '../services/services.config.ts'
+import { getTimeLeft, UseItemNavigation } from  '../services/services.config.ts'
 
-const { goToItem } = UseNavigation()
+const { goToItem } = UseItemNavigation()
 
 const endingSoon = ref<any[]>([])
 const currentIndex = ref(0)

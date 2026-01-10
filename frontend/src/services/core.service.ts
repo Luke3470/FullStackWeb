@@ -1,5 +1,5 @@
 import { get } from './services.config.ts';
-import {toast} from "vue-sonner";
+import { toast } from "vue-sonner";
 import { ref } from 'vue';
 
 export type ItemStatus = 'BID' | 'OPEN' | 'ARCHIVE'
@@ -27,52 +27,45 @@ export interface ItemList {
     total: number
 }
 
-interface SearchRefs {
-    searchQuery: any
-    statusFilter: any
-    limit: any
-    offset: any
-    results: any
+interface SearchParams {
+    searchQuery?: string
+    statusFilter?: string
+    limit?: number
+    offset?: number
 }
 
 export async function searchItems(
     params: SearchParams = {},
+    auth: string | null
 ): Promise<ItemList> {
     const query = new URLSearchParams()
     if (params.q) query.append('q', params.q)
     if (params.status) query.append('status', params.status)
-    if (params.limit) query.append('limit', params.limit.toString())
-    if (params.offset) query.append('offset', params.offset.toString())
+    if (params.limit !== undefined) query.append('limit', String(params.limit))
+    if (params.offset !== undefined) query.append('offset', String(params.offset))
 
     let endpoint;
-    if (!params){
-        endpoint = `search?${query.toString()}`
-    }
-    else
-    {
-        endpoint = `search?${query.toString()}`
-    }
-    return get<ItemList>(endpoint, null)
+
+    endpoint = `search?${query.toString()}`
+    return get<ItemList>(endpoint, auth)
 }
 
-export async function performSearch (refs: SearchRefs) {
-    const { searchQuery, statusFilter, limit, offset, results } = refs
-
+export async function performSearch(params: SearchParams = {}, auth: string | null = null): Promise<any[]> {
     try {
-        const data = await searchItems({
-            q: searchQuery.value || undefined,
-            status: statusFilter.value || undefined,
-            limit: limit.value,
-            offset: offset.value,
-        })
+        const data = await searchItems(
+            {
+                q: params.searchQuery || undefined,
+                status: params.statusFilter || undefined,
+                limit: params.limit,
+                offset: params.offset
+            },
+            auth
+        )
 
-        results.value = Array.isArray(data) ? data : []
-
+        return Array.isArray(data) ? data : []
     } catch (err) {
         console.error("Search failed:", err)
-        results.value = []
-
-        const message = err?.error_message || "Unable to fetch results from the server."
-        toast.error(message)
+        toast.error(err?.error_message || "Unable to fetch results from the server.")
+        return []
     }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -23,21 +23,35 @@ const handleLogin = async () => {
     return
   }
 
-  const response = await logIn(email.value, password.value)
-  if (response) {
-    console.log(response)
-    localStorage.setItem('user_id', String(response.user_id))
-    localStorage.setItem('session_token', response.session_token)
-    session.setLoggedIn(true)
-
-    const redirectTo = (route.query.redirect as string) || '/'
-    router.push(redirectTo)
+  loading.value = true
+  try {
+    const response = await logIn({ email: email.value, password: password.value })
+    if (response) {
+      session.setAuthToken(response.session_token, String(response.user_id))
+      await nextTick()
+      session.setLoggedIn(true)
+      const redirectTo = (route.query.redirect as string) || '/'
+      router.push(redirectTo)
+    } else {
+      toast.error('Login failed')
+    }
+  } finally {
+    loading.value = false
   }
 }
+
 
 const goSignUp = () => {
   router.push({ name: 'signup' })
 }
+
+watch(
+    () => session?.userId?.value,
+    (newVal) => {
+      console.log('User ID updated:', newVal)
+    },
+    { immediate: true }
+)
 </script>
 
 <template>

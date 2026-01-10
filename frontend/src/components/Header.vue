@@ -8,14 +8,20 @@ import ModeToggle from '@/components/ModeToggle.vue'
 import { ref, watch, computed } from 'vue'
 import { useSessionStore } from '../stores/session.ts'
 import { logOut } from  '../services/user.service.ts'
+import { storeToRefs } from 'pinia'
+import { UseUserNavigation } from  '../services/services.config.ts'
 
 const session = useSessionStore()
-const loggedIn = computed(() => session.loggedIn)
+const { loggedIn, userId } = storeToRefs(session)
+
+const { goToUser } = UseUserNavigation()
 
 const router = useRouter()
 const route = useRoute()
 
 const searchQuery = ref('')
+
+const safeUserId = computed(() => userId.value ?? '')
 
 const goToLogin = () => {
   router.push({ name: 'login', query: { redirect: route.fullPath } })
@@ -30,6 +36,19 @@ const goSearch = () => {
   }
 }
 
+const goCreate = () => {
+  router.push({ name: 'create' })
+}
+
+const handleGoToProfile = () => {
+  if (!userId.value) {
+    console.warn('No user ID yet')
+    return
+  }
+  goToUser(userId.value)
+}
+
+
 const handleSearchKey = (event: KeyboardEvent) => {
   if (event.key === 'Enter') {
     event.preventDefault()
@@ -39,22 +58,31 @@ const handleSearchKey = (event: KeyboardEvent) => {
 
 const handleLogout = async () => {
   try {
-    const token = session.authToken ?? localStorage.getItem('session_token')
-    const response = await logOut(token)
+    const token = session.authToken.value
+    if (token) {
+      const response = await logOut(token)
 
-    if (response?.message === "Logged out successfully") {
-      localStorage.removeItem('user_id')
-      localStorage.removeItem('session_token')
-
-      session.setLoggedIn(false)
-      session.authToken = null
-
-      console.log("Logout complete. Storage cleared.")
-    } else {
-      console.error("Logout failed", response)
+      if (response?.message === "Logged out successfully") {
+        console.log("Logout complete. Storage cleared.")
+      } else {
+        console.warn("Logout failed", response)
+        if (response?.error_message === 'Invalid or expired session token') {
+          toast.error(response.error_message + ". Redirecting to login.")
+        }
+      }
     }
   } catch (err: any) {
     console.error("Logout error:", err)
+    toast.error("Error logging out. Redirecting to login.")
+  } finally {
+    session.setAuthToken(null)
+    session.setUserId(null)
+    session.setLoggedIn(false)
+
+    localStorage.removeItem('session_token')
+    localStorage.removeItem('user_id')
+
+    router.push({ name: 'login' })
   }
 }
 
@@ -64,6 +92,10 @@ watch(
       searchQuery.value = ''
     }
 )
+
+watch(userId, (val) => {
+  console.log('Header sees updated userId:', val)
+})
 
 </script>
 
@@ -90,23 +122,24 @@ watch(
 
       <div class="flex items-center space-x-4">
         <ModeToggle />
-
         <Button v-if="!loggedIn" variant="default" @click="goToLogin">
-          Login
+          Log in
         </Button>
-
-        <DropdownMenu v-else>
+        <Button v-if="loggedIn" variant="default" @click="goCreate">
+          Create Item
+        </Button>
+        <DropdownMenu v-if="loggedIn">
           <DropdownMenuTrigger as-child>
             <Avatar class="cursor-pointer">
               <AvatarFallback>U</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem @click="handleGoToProfile">View Profile</DropdownMenuItem>
             <DropdownMenuItem @click="handleLogout">Log Out</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
     </div>
   </header>
 </template>

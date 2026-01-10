@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useRouter } from 'vue-router'
+import { signUp } from '../services/user.service.ts';
+import { useSessionStore } from '../stores/session.ts'
 
+const session = useSessionStore()
 const router = useRouter()
 
 const firstName = ref('')
@@ -14,8 +17,23 @@ const email = ref('')
 const password = ref('')
 
 
-const handleSignUp = () => {
-  router.push({ name: 'login' })
+const handleSignUp = async () => {
+
+  if (!firstName.value || !lastName.value ||!email.value || !password.value) {
+    toast.error('Please Fill all Fields')
+    return
+  }
+
+  const response = await signUp({
+    first_name: firstName.value,
+    last_name: lastName.value,
+    email: email.value,
+    password: password.value,
+  })
+  if (response) {
+    console.log(response)
+    router.push({name: 'login'})
+  }
 }
 
 

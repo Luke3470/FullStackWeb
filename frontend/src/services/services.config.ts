@@ -1,7 +1,5 @@
 import { useRouter } from 'vue-router'
 
-const router = useRouter()
-
 export const BASE_API_URL = 'http://localhost:3333'
 
 
@@ -54,7 +52,6 @@ export async function post<T>(endpoint: string, body: any | null, auth: string |
     if (!res.ok) {
         throw data
     }
-
     return data
 }
 
@@ -78,7 +75,7 @@ export function getTimeLeft(endEpoch: number) {
     return `${days}d ${hours}h ${minutes}m ${seconds}s`
 }
 
-export function UseNavigation (id: number)  {
+export function UseItemNavigation (id: number)  {
     const router = useRouter()
 
     const goToItem = (id: number) => {
@@ -87,3 +84,15 @@ export function UseNavigation (id: number)  {
 
     return { goToItem }
 }
+
+export function UseUserNavigation ()  {
+    const router = useRouter()
+
+    const goToUser = (id: string) => {
+        console.log(id)
+        router.push({ name: 'user', params: { id: id} })
+    }
+
+    return { goToUser }
+}
+

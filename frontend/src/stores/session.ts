@@ -4,17 +4,38 @@ import { ref } from 'vue'
 export const useSessionStore = defineStore('session', () => {
     const loggedIn = ref(!!localStorage.getItem('session_token'))
     const authToken = ref(localStorage.getItem('session_token'))
+    const userId = ref(localStorage.getItem('user_id'))
 
     function setLoggedIn(value: boolean) {
         loggedIn.value = value
-        if (!value) authToken.value = null
+        if (!value) {
+            authToken.value = null
+            userId.value = null
+            localStorage.removeItem('session_token')
+            localStorage.removeItem('user_id')
+        }
     }
 
-    function setAuthToken(token: string) {
+    function setAuthToken(token: string | null, id?: string) {
         authToken.value = token
-        loggedIn.value = true
-        localStorage.setItem('session_token', token)
+        userId.value = id ?? null
+        loggedIn.value = !!token
+
+        console.log('Auth Token:', authToken.value)
+        console.log('User ID after setAuthToken:', userId.value)
+
+        if (token) localStorage.setItem('session_token', token)
+        else localStorage.removeItem('session_token')
+
+        if (id) localStorage.setItem('user_id', id)
+        else localStorage.removeItem('user_id')
     }
 
-    return { loggedIn, authToken, setLoggedIn, setAuthToken }
+    function setUserId(id: string | null) {
+        userId.value = id
+        if (id) localStorage.setItem('user_id', id)
+        else localStorage.removeItem('user_id')
+    }
+
+    return { loggedIn, authToken, userId, setLoggedIn, setAuthToken, setUserId }
 })
