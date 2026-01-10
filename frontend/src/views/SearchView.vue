@@ -8,8 +8,8 @@ import { toast } from 'vue-sonner'
 import { getTimeLeft, UseUserNavigation, UseItemNavigation } from  '../services/services.config.ts'
 import { useSessionStore } from "@/stores/session.ts";
 
-const { goToItem } = UseUserNavigation()
-const { goToUser } = UseItemNavigation()
+const { goToItem } = UseItemNavigation()
+const { goToUser } = UseUserNavigation()
 const session = useSessionStore()
 
 const route = useRoute()
@@ -67,6 +67,16 @@ const handleEnter = (event: KeyboardEvent) => {
     })
   }
 }
+
+const handleGoToUser = (id: string | null | undefined, event: MouseEvent) => {
+  event.stopPropagation()
+  if (!id) {
+    console.warn('No user ID to navigate to')
+    return
+  }
+  goToUser(String(id))
+}
+
 
 const nextPage = () => {
   offset.value += limit.value
@@ -135,8 +145,8 @@ const setStatus = (status: string) => {
         <p class="text-purple-600 font-semibold">
           Time Left: {{ getTimeLeft(item.end_date) }}
         </p>
-        <p class="font-semibold" @click="goToUser(item.user_id)">
-          Listed By: {{ item.first_name }} {{item.last_name}}
+        <p class="font-semibold cursor-pointer" @click="(event) => handleGoToUser(item.creator_id, event)">
+          Listed By: {{ item.first_name }} {{ item.last_name }}
         </p>
       </li>
     </ul>
