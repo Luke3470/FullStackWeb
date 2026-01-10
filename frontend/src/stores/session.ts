@@ -39,3 +39,38 @@ export const useSessionStore = defineStore('session', () => {
 
     return { loggedIn, authToken, userId, setLoggedIn, setAuthToken, setUserId }
 })
+
+
+export interface ItemDraft {
+    id: string
+    name: string
+    description: string
+    current_bid?: number
+    end_date: string
+    first_name?: string
+    last_name?: string
+}
+
+export const useDraftsStore = defineStore('drafts', () => {
+    const drafts = ref<ItemDraft[]>(JSON.parse(localStorage.getItem('item_drafts') || '[]'))
+
+    const saveDraft = (draft: ItemDraft) => {
+        const index = drafts.value.findIndex(d => d.id === draft.id)
+        if (index >= 0) drafts.value[index] = draft
+        else drafts.value.push(draft)
+
+        localStorage.setItem('item_drafts', JSON.stringify(drafts.value))
+    }
+
+    const deleteDraft = (id: string) => {
+        drafts.value = drafts.value.filter(d => d.id !== id)
+        localStorage.setItem('item_drafts', JSON.stringify(drafts.value))
+    }
+
+    const clearDrafts = () => {
+        drafts.value = []
+        localStorage.removeItem('item_drafts')
+    }
+
+    return { drafts, saveDraft, deleteDraft, clearDrafts }
+})

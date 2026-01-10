@@ -140,7 +140,7 @@ const setStatus = (status: string) => {
         <h3 class="text-xl font-semibold mb-1">{{ item.name }}</h3>
         <p class="text-sm text-muted-foreground mb-2">{{ item.description }}</p>
         <p class="font-medium">
-          Current Bid: <span class="text-green-600 font-bold">${{ item.current_bid }}</span>
+          Current Bid: <span class="text-green-600 font-bold">£ {{ item.current_bid }}</span>
         </p>
         <p class="text-purple-600 font-semibold">
           Time Left: {{ getTimeLeft(item.end_date) }}

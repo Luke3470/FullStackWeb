@@ -1,4 +1,4 @@
-import { get } from './services.config.ts';
+import { get,post } from './services.config.ts';
 import { toast } from "vue-sonner";
 import { ref } from 'vue';
 
@@ -68,4 +68,12 @@ export async function performSearch(params: SearchParams = {}, auth: string | nu
         toast.error(err?.error_message || "Unable to fetch results from the server.")
         return []
     }
+}
+
+export async function createItem(body: any, auth: string ): Promise<any> {
+    if(!auth){
+        toast.error("User Must be logged in")
+        return
+    }
+    return post('item',body,auth)
 }

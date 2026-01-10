@@ -70,7 +70,7 @@ onBeforeUnmount(() => clearInterval(timer))
           />
           <p class="text-sm text-muted-foreground">{{ endingSoon[currentIndex].description }}</p>
           <p class="font-medium">
-            Current Bid: <span class="text-green-600 font-bold">${{ endingSoon[currentIndex].current_bid }}</span>
+            Current Bid: <span class="text-green-600 font-bold">£{{ endingSoon[currentIndex].current_bid }}</span>
           </p>
           <p class="text-purple-600 font-semibold" >
             Time Left: {{ getTimeLeft(endingSoon[currentIndex].end_date) }}
