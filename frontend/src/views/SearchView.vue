@@ -78,21 +78,39 @@ const handleGoToUser = (id: string | null | undefined, event: MouseEvent) => {
 }
 
 
-const nextPage = () => {
+const nextPage = async () => {
   offset.value += limit.value
   page.value += 1
-  performSearch()
+  const token = localStorage.getItem('session_token') || null
+
+  results.value = await performSearch(
+      {
+        searchQuery: searchQuery.value,
+        statusFilter: statusFilter.value,
+        limit: limit.value,
+        offset: offset.value
+      },token
+  )
 }
 
-const prevPage = () => {
+const prevPage = async () => {
   if (offset.value >= limit.value) {
     offset.value -= limit.value
     page.value -= 1
-    performSearch()
+    const token = localStorage.getItem('session_token') || null
+
+    results.value = await performSearch(
+        {
+          searchQuery: searchQuery.value,
+          statusFilter: statusFilter.value,
+          limit: limit.value,
+          offset: offset.value
+        },token
+    )
   }
 }
 
-const setStatus = (status: string) => {
+const setStatus = async (status: string) => {
   statusFilter.value = status
   offset.value = 0
   page.value = 1
@@ -100,7 +118,7 @@ const setStatus = (status: string) => {
   if (!token) {
     token = null;
   }
-  performSearch({ searchQuery: searchQuery.value,
+  results.value = await performSearch({ searchQuery: searchQuery.value,
     statusFilter: statusFilter.value,
     limit: limit.value,
     offset: offset.value },token)

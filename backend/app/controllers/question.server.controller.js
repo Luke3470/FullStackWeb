@@ -52,7 +52,7 @@ const postItemQuestions = async (req, res) => {
 
         await model.createQuestion(itemId, userId, req.body.question_text);
 
-        return res.sendStatus(200);
+        return res.status(200).json({message:"success"});
 
     } catch (err) {
         if (err.status === 404 || err.message === 'Item not found') {

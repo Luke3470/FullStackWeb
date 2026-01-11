@@ -100,3 +100,13 @@ export async function getItemBids(itemId: string): Promise<any> {
     }
 }
 
+export async function submitBid(itemId: string,body,token): Promise<any> {
+    try {
+        const url = 'item/'+itemId+'/bid'
+        return await post(url,body,token)
+    } catch (err) {
+        console.error("Search failed:", err)
+        toast.error(err?.error_message || "Unable to fetch results from the server.")
+        return []
+    }
+}
