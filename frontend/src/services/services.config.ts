@@ -50,7 +50,7 @@ export async function post<T>(endpoint: string, body: any | null, auth: string |
     const data = await res.json()
 
     if (!res.ok) {
-        throw data
+        throw new Error(data.error_message || 'Unknown error')
     }
     return data
 }

@@ -93,6 +93,7 @@ const submitItem = async () => {
       end_date: endTimestamp
     }
     const response = await createItem(payload, token)
+
     if (response) {
       toast.success('Item submitted successfully!')
       if (editingDraftId.value) draftsStore.deleteDraft(editingDraftId.value)
