@@ -44,7 +44,11 @@ const canAnswer = computed(() => {
 })
 
 const openQuestionModal = () => {
+  if (!authToken.value) {
+    return toast.error("You must be logged in to ask a question.")
+  }
   showQuestionModal.value = true
+
 }
 
 const closeQuestionModal = () => {
@@ -53,6 +57,9 @@ const closeQuestionModal = () => {
 }
 
 const openBidModal = () => {
+  if (!authToken.value) {
+    return toast.error("You must be logged in to place a bid.")
+  }
   showBidModal.value = true
 }
 
