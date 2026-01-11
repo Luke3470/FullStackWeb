@@ -1,4 +1,4 @@
-import { post } from './services.config.ts'
+import { get,post } from './services.config.ts'
 import { toast } from "vue-sonner"
 import joi from "joi"
 
@@ -73,4 +73,14 @@ export async function signUp(body: any) {
         toast.error(message)
         return null
     }
+}
+
+export async function getUserDetails(userId: string) {
+    const url = 'users/'+userId
+    return await get(url)
+}
+
+export async function getUserQuestions(userId: string) {
+    const url = 'question/'+userId
+    return await get(url)
 }
