@@ -1,7 +1,7 @@
 const { RegExpMatcher, TextCensor, englishDataset, englishRecommendedTransformers} = require('obscenity');
 const joi = require('joi');
 const model  = require('../models/question.server.model');
-
+const userModel  = require('../models/user.server.model');
 const { getUserID } = require('../lib/utils');
 
 const getItemQuestions = async (req, res) => {
@@ -108,8 +108,26 @@ const postQuestionById = async (req, res) => {
     }
 }
 
+const getUserQuestions = async (req, res) => {
+    const userId = req.params.user_id;
+    try {
+        const user = await userModel.getUserById(userId);
+        const questions = await model.getUserQuestions(userId);
+        return res.status(200).json(questions);
+
+    }catch (err) {
+        if (err.status === 404) {
+            return res.status(404).json({ error_message: err.message });
+        }
+        console.error(err);
+        return res.status(500).json({ error_message: err.message });
+
+    }
+}
+
 module.exports = {
     postQuestionById,
     postItemQuestions,
-    getItemQuestions
+    getItemQuestions,
+    getUserQuestions
 }

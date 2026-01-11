@@ -5,4 +5,5 @@ module.exports = function (app){
     app.route("/item/:item_id/question").get(question.getItemQuestions);
     app.route("/item/:item_id/question").post(auth,question.postItemQuestions);
     app.route("/question/:question_id").post(auth,question.postQuestionById);
+    app.route("/question/:user_id").get(question.getUserQuestions)
 }

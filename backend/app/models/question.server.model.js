@@ -74,11 +74,27 @@ async function answerQuestion(questionId, answerText) {
     });
 }
 
+async function getUserQuestions(userId) {
+    const sql = `SELECT 
+        items.item_id,
+        items.name,
+        questions.question
+        FROM questions 
+        JOIN items ON items.item_id = questions.item_id
+        WHERE items.creator_id = ? and questions.answer IS NULL `;
+    return new Promise((resolve, reject) => {
+        db.all(sql,[userId],function (err,row){
+            if (err) return reject(err);
+            resolve(row);
+        })
+    })
+}
+
 module.exports = {
     getItemById,
     getQuestionsByItemId,
     createQuestion,
     getQuestionWithItem,
-    answerQuestion
-
+    answerQuestion,
+    getUserQuestions
 };
