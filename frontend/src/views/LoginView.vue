@@ -17,6 +17,10 @@ const email = ref('')
 const password = ref('')
 const loading = ref(false)
 
+const goSignUp = () => {
+  router.push({ name: 'signup' })
+}
+
 const handleLogin = async () => {
   if (!email.value || !password.value) {
     toast.error('Please enter both email and password')
@@ -40,18 +44,6 @@ const handleLogin = async () => {
   }
 }
 
-
-const goSignUp = () => {
-  router.push({ name: 'signup' })
-}
-
-watch(
-    () => session?.userId?.value,
-    (newVal) => {
-      console.log('User ID updated:', newVal)
-    },
-    { immediate: true }
-)
 </script>
 
 <template>

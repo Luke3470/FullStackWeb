@@ -16,6 +16,9 @@ const lastName = ref('')
 const email = ref('')
 const password = ref('')
 
+const goToLogin = () => {
+  router.push({ name: 'login' })
+}
 
 const handleSignUp = async () => {
 
@@ -36,10 +39,6 @@ const handleSignUp = async () => {
   }
 }
 
-
-const goToLogin = () => {
-  router.push({ name: 'login' })
-}
 </script>
 
 <template>

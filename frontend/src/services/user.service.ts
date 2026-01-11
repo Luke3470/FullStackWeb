@@ -3,7 +3,6 @@ import { toast } from "vue-sonner"
 import joi from "joi"
 
 export async function logIn(body: any) {
-
     const schema = joi.object({
         email: joi.string().email().required(),
         password: joi.string().required()
@@ -57,14 +56,11 @@ export async function signUp(body: any) {
                 'any.required': 'Password is required'
             })
     });
-
     const {error} = await schema.validate(body);
-
     if (error) {
         toast.error(error.message || "Input Data was Incorrect")
         return null
     }
-
     try {
         return await post('users',body,null)
     } catch (err: any) {

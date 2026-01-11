@@ -40,8 +40,6 @@ const timeLeft = computed(() => {
 })
 
 const canAnswer = computed(() => {
-  console.log(item.value?.creator_id)
-  console.log(userId.value)
   return item.value?.creator_id == userId.value
 })
 

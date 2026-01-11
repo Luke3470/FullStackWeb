@@ -21,9 +21,6 @@ export const useSessionStore = defineStore('session', () => {
         userId.value = id ?? null
         loggedIn.value = !!token
 
-        console.log('Auth Token:', authToken.value)
-        console.log('User ID after setAuthToken:', userId.value)
-
         if (token) localStorage.setItem('session_token', token)
         else localStorage.removeItem('session_token')
 
@@ -39,7 +36,6 @@ export const useSessionStore = defineStore('session', () => {
 
     return { loggedIn, authToken, userId, setLoggedIn, setAuthToken, setUserId }
 })
-
 
 export interface ItemDraft {
     id: string

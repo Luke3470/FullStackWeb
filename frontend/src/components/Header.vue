@@ -13,7 +13,6 @@ import { UseUserNavigation } from  '../services/services.config.ts'
 
 const session = useSessionStore()
 const { loggedIn, userId } = storeToRefs(session)
-
 const { goToUser } = UseUserNavigation()
 
 const router = useRouter()
@@ -92,10 +91,6 @@ watch(
       searchQuery.value = ''
     }
 )
-
-watch(userId, (val) => {
-  console.log('Header sees updated userId:', val)
-})
 
 </script>
 

@@ -89,7 +89,6 @@ export function UseUserNavigation ()  {
     const router = useRouter()
 
     const goToUser = (id: string) => {
-        console.log(id)
         router.push({ name: 'user', params: { id: id} })
     }
 

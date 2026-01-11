@@ -10,6 +10,7 @@ import { useSessionStore } from "@/stores/session.ts";
 
 const { goToItem } = UseItemNavigation()
 const { goToUser } = UseUserNavigation()
+
 const session = useSessionStore()
 
 const route = useRoute()
@@ -20,53 +21,7 @@ const statusFilter = ref('')
 const limit = ref(10)
 const offset = ref(0)
 const page = ref(1)
-
 const results = ref<any[]>([])
-
-let timer: number
-onMounted(() => {
-  timer = setInterval(() => {
-    results.value = [...results.value]
-  }, 1000)
-})
-onBeforeUnmount(() => clearInterval(timer))
-
-
-watch(
-    [() => route.query.q, () => route.query.status, () => session.authToken ],
-    async ([newQuery, newStatus, authRef]) => {
-      let token = localStorage.getItem('session_token')
-      if (!token) {
-        token = null;
-      }
-
-      searchQuery.value = (newQuery as string) || ''
-      statusFilter.value = (newStatus as string) || ''
-      offset.value = 0
-      page.value = 1
-
-      results.value = await performSearch(
-          {
-            searchQuery: searchQuery.value,
-            statusFilter: statusFilter.value,
-            limit: limit.value,
-            offset: offset.value
-          },
-          token
-      )
-    },
-    { immediate: true }
-)
-
-const handleEnter = (event: KeyboardEvent) => {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    router.push({
-      name: 'search',
-      query: { q: searchQuery.value, status: statusFilter.value },
-    })
-  }
-}
 
 const handleGoToUser = (id: string | null | undefined, event: MouseEvent) => {
   event.stopPropagation()
@@ -77,6 +32,15 @@ const handleGoToUser = (id: string | null | undefined, event: MouseEvent) => {
   goToUser(String(id))
 }
 
+const handleEnter = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    router.push({
+      name: 'search',
+      query: { q: searchQuery.value, status: statusFilter.value },
+    })
+  }
+}
 
 const nextPage = async () => {
   offset.value += limit.value
@@ -123,6 +87,40 @@ const setStatus = async (status: string) => {
     limit: limit.value,
     offset: offset.value },token)
 }
+
+let timer: number
+onMounted(() => {
+  timer = setInterval(() => {
+    results.value = [...results.value]
+  }, 1000)
+})
+onBeforeUnmount(() => clearInterval(timer))
+
+watch(
+    [() => route.query.q, () => route.query.status, () => session.authToken ],
+    async ([newQuery, newStatus, authRef]) => {
+      let token = localStorage.getItem('session_token')
+      if (!token) {
+        token = null;
+      }
+
+      searchQuery.value = (newQuery as string) || ''
+      statusFilter.value = (newStatus as string) || ''
+      offset.value = 0
+      page.value = 1
+
+      results.value = await performSearch(
+          {
+            searchQuery: searchQuery.value,
+            statusFilter: statusFilter.value,
+            limit: limit.value,
+            offset: offset.value
+          },
+          token
+      )
+    },
+    { immediate: true }
+)
 
 </script>
 
